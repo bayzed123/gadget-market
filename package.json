@@ -1,0 +1,38 @@
+{
+  "name": "gadget-market",
+  "version": "1.0.0",
+  "private": true,
+  "description": "Gadget Market — gadget & tech-accessories shop (Dhaka) on one Cloudflare Worker (Hono + D1 + KV + R2)",
+  "type": "module",
+  "engines": {
+    "node": ">=20"
+  },
+  "scripts": {
+    "build": "node scripts/build.mjs",
+    "typecheck": "node scripts/build.mjs && tsc --noEmit",
+    "dev": "npm run build && wrangler dev -c worker/wrangler.toml",
+    "db:migrate:local": "wrangler d1 migrations apply DB --local -c worker/wrangler.toml",
+    "db:migrate:remote": "wrangler d1 migrations apply DB --remote -c worker/wrangler.toml",
+    "db:seed:local": "npm run build && wrangler d1 execute DB --local -c worker/wrangler.toml --file=./dist-seed/seed.sql",
+    "db:seed:remote": "npm run build && wrangler d1 execute DB --remote -c worker/wrangler.toml --file=./dist-seed/seed.sql",
+    "admin:create": "node scripts/create-admin.mjs",
+    "geo": "node scripts/build-geo.mjs",
+    "test": "node scripts/build.mjs && vitest run",
+    "test:e2e": "playwright test",
+    "deploy": "npm run build && wrangler deploy -c worker/wrangler.toml"
+  },
+  "dependencies": {
+    "hono": "^4.13.9",
+    "zod": "^4.6.5"
+  },
+  "devDependencies": {
+    "@cloudflare/vitest-pool-workers": "^0.22.0",
+    "@cloudflare/workers-types": "^5.20260924.1",
+    "@playwright/test": "^1.63.0",
+    "three": "^0.186.1",
+    "typescript": "^7.0.2",
+    "vite": "^7.1.0",
+    "vitest": "~4.1.11",
+    "wrangler": "^4.138.0"
+  }
+}

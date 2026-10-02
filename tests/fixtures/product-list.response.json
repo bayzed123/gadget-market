@@ -1,0 +1,41 @@
+{
+  "items": [
+    {
+      "id": 32,
+      "slug": "gaming-starter-combo",
+      "name_en": "Gaming Starter Combo: Controller + Headset + Mouse",
+      "name_bn": "গেমিং স্টার্টার কম্বো: কন্ট্রোলার + হেডসেট + মাউস",
+      "brand": "Gadget Market",
+      "price": 7290,
+      "sale_price": null,
+      "images": [
+        "/img/products/gaming-starter-combo.webp"
+      ],
+      "compatible": [
+        "windows",
+        "laptop",
+        "switch",
+        "android"
+      ],
+      "warranty_months": 6,
+      "rating_avg": 0,
+      "rating_count": 0,
+      "sold_count": 0,
+      "is_featured": 0,
+      "delivery_mode": "zone",
+      "created_at": "2026-10-02T17:09:35.961Z",
+      "category_id": 13,
+      "is_bundle": true,
+      "deal_until": null,
+      "size_label": "Combo (3 items)",
+      "variant_count": 1,
+      "stock": 4,
+      "cert_count": 0,
+      "discount_percent": 0,
+      "in_stock": true
+    }
+  ],
+  "total": 32,
+  "page": 1,
+  "pages": 32
+}

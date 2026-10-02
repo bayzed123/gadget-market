@@ -1,0 +1,54 @@
+# Gadget Market — one Cloudflare Worker serves the storefront, the admin dashboard and the /api/* routes.
+# Paths below are relative to this file (worker/). The database_id / KV id placeholders are replaced by
+# scripts/provision.mjs on the first GitHub Actions deploy, or by hand after `wrangler d1 create` (docs/SETUP.md).
+
+name = "gadget-market"
+main = "src/index.ts"
+compatibility_date = "2026-08-15"
+compatibility_flags = ["nodejs_compat"]
+
+[assets]
+directory = "../dist"
+binding = "ASSETS"
+not_found_handling = "single-page-application"
+# The Worker runs first only for dynamic routes; everything else is served straight from the edge cache.
+run_worker_first = ["/api/*", "/media/*", "/sitemap.xml", "/robots.txt", "/feeds/*", "/product/*", "/shop/*", "/wa", "/guides/*", "/lp/*"]
+
+[vars]
+ENVIRONMENT = "production"
+PUBLIC_URL = ""   # set to https://your-domain once a custom domain is live (CI variable PUBLIC_URL overrides this)
+
+[[d1_databases]]
+binding = "DB"
+database_name = "gadget-market-db"
+database_id = "00000000-0000-0000-0000-000000000000"
+migrations_dir = "migrations"
+
+[[kv_namespaces]]
+binding = "KV"
+id = "00000000000000000000000000000000"
+
+[[r2_buckets]]
+binding = "MEDIA"
+bucket_name = "gadget-market-media"
+
+# Optional (Phase 3): Workers AI drafts bilingual product descriptions from the spec sheet (checked for fake urgency
+# and impossible promises before use). The gadget finder is rule-based and works without it. Uncomment to enable (AI always runs remotely, so `wrangler dev` then needs `wrangler login`).
+# [ai]
+# binding = "AI"
+
+# Background jobs: abandoned-checkout detection & recovery, review requests, retention purge, ending past deals and the expired-lot
+# write-off (every 10 minutes) and a nightly D1 → R2 backup (21:00 UTC = 03:00 Bangladesh time).
+[triggers]
+crons = ["*/10 * * * *", "0 21 * * *"]
+
+[observability]
+enabled = true
+
+# Custom domain — uncomment after the zone is on Cloudflare DNS (docs/SETUP.md → Custom domain).
+# routes = [
+#   { pattern = "gadgetmarket.com.bd", custom_domain = true },
+#   { pattern = "www.gadgetmarket.com.bd", custom_domain = true }
+# ]
+
+# Local development overrides ENVIRONMENT / PUBLIC_URL and secrets through worker/.dev.vars (git-ignored).

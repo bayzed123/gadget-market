@@ -1,0 +1,13 @@
+node_modules/
+dist/
+dist-seed/
+.wrangler/
+.dev.vars
+.env
+test-results/
+playwright-report/
+coverage/
+*.log
+.DS_Store
+.admin.sql
+.secrets.json

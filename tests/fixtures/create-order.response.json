@@ -1,0 +1,16 @@
+{
+  "orderNo": "GMK-261001-7K2Q",
+  "token": "3f0cA1b2C3d4E5f6G7h8I9j0",
+  "status": "pending",
+  "total": 5980,
+  "redirectUrl": null,
+  "purchaseEventId": "purchase-GMK-261001-7K2Q",
+  "items": [
+    {
+      "sku": "GAD-EB-SON-BLK-0001",
+      "name": "Sonix Buds Pro ANC Earbuds",
+      "quantity": 2,
+      "price": 2990
+    }
+  ]
+}

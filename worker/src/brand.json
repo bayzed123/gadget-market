@@ -1,0 +1,40 @@
+{
+  "slug": "gadget-market",
+  "name": { "en": "Gadget Market", "bn": "গ্যাজেট মার্কেট" },
+  "tagline": { "en": "Smart gear. Honest specs.", "bn": "স্মার্ট গ্যাজেট, সৎ স্পেক" },
+  "description": {
+    "en": "Earbuds, headphones, smartwatches, power banks, chargers, cables, phone cases, gaming and smart-home gadgets — full spec sheets, real warranty and Cash on Delivery across Bangladesh.",
+    "bn": "ইয়ারবাড, হেডফোন, স্মার্টওয়াচ, পাওয়ার ব্যাংক, চার্জার, ক্যাবল, ফোন কেস, গেমিং ও স্মার্ট-হোম গ্যাজেট — পূর্ণ স্পেসিফিকেশন, আসল ওয়ারেন্টি আর সারা বাংলাদেশে ক্যাশ অন ডেলিভারি।"
+  },
+  "domain": "gadgetmarket.com.bd",
+  "defaultLang": "bn",
+  "orderPrefix": "GMK",
+  "skuPrefix": "GAD",
+  "invoicePrefix": "INV-GAD",
+  "location": {
+    "city": { "en": "Dhaka", "bn": "ঢাকা" },
+    "address": { "en": "Shop 512, Level 5, Multiplan Center, New Elephant Road, Dhaka 1205", "bn": "দোকান ৫১২, লেভেল ৫, মাল্টিপ্ল্যান সেন্টার, নিউ এলিফ্যান্ট রোড, ঢাকা ১২০৫" },
+    "postcode": "1205",
+    "lat": 23.7389,
+    "lng": 90.3843
+  },
+  "contact": {
+    "phone": "+8801700000000",
+    "whatsapp": "8801700000000",
+    "email": "hello@gadgetmarket.com.bd",
+    "hours": { "en": "Saturday – Thursday, 11am – 9pm", "bn": "শনিবার – বৃহস্পতিবার, সকাল ১১টা – রাত ৯টা" }
+  },
+  "social": { "facebook": "", "instagram": "", "tiktok": "" },
+  "colors": {
+    "yellow": "#16202B",
+    "mint": "#13241F",
+    "lavender": "#1B1830",
+    "peach": "#2A1A1E",
+    "sky": "#112233",
+    "pink": "#271728",
+    "primary": "#22D3EE",
+    "primaryDark": "#0EA5C6",
+    "ink": "#E7ECF3",
+    "theme": "#0D0E12"
+  }
+}

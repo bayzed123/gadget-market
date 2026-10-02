@@ -1,0 +1,5 @@
+{
+  "admin": { "id": 1, "name": "Owner", "email": "owner@test.dev", "role": "super_admin", "iat": 1790000000000, "needs2fa": true },
+  "permissions": ["dashboard.view", "products.read", "products.write"],
+  "needs2fa": true
+}

@@ -1,0 +1,134 @@
+# Deploy — publishes the shop to Cloudflare Workers after CI passes on main (or by hand: Actions → Deploy → Run workflow).
+#
+#   find-or-create D1 + KV + R2 → apply migrations → first-run seed + Super Admin (empty database only)
+#   → wrangler deploy → sync Worker secrets → smoke test → doctor (full health check, report in the run summary)
+#
+# REQUIRED repository secrets (Settings → Secrets and variables → Actions):
+#   CLOUDFLARE_API_TOKEN, CLOUDFLARE_ACCOUNT_ID
+# Recommended for the first deploy (creates the Super Admin): ADMIN_USERNAME, ADMIN_PASSWORD (optional ADMIN_NAME)
+# Optional secrets (integrations) — the full list with what each one enables is in docs/SETUP.md.
+# Optional repository variables: WORKER_NAME (default gadget-market), PUBLIC_URL (https://your-domain)
+name: Deploy
+
+on:
+  workflow_run:
+    workflows: [CI]
+    types: [completed]
+    branches: [main]
+  workflow_dispatch:
+
+# One deploy at a time; a newer one waits instead of cancelling a deploy halfway through.
+concurrency:
+  group: deploy-production
+  cancel-in-progress: false
+
+permissions:
+  contents: read
+
+jobs:
+  deploy:
+    # After CI: only a successful run for a push to main. By hand: always.
+    if: github.event_name == 'workflow_dispatch' || (github.event.workflow_run.conclusion == 'success' && github.event.workflow_run.event == 'push')
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    environment: production
+    env:
+      CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+      CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
+      WORKER_NAME: ${{ vars.WORKER_NAME || 'gadget-market' }}
+      PUBLIC_URL: ${{ vars.PUBLIC_URL }}
+    steps:
+      - uses: actions/checkout@v5
+        with:
+          # Deploy exactly the commit CI tested.
+          ref: ${{ github.event.workflow_run.head_sha || github.sha }}
+      - uses: actions/setup-node@v5
+        with:
+          node-version: 22
+          cache: npm
+      - run: npm ci
+      - name: Check required secrets
+        run: |
+          test -n "$CLOUDFLARE_API_TOKEN" || { echo "::error::Add the CLOUDFLARE_API_TOKEN repository secret"; exit 1; }
+          test -n "$CLOUDFLARE_ACCOUNT_ID" || { echo "::error::Add the CLOUDFLARE_ACCOUNT_ID repository secret"; exit 1; }
+      - name: Build
+        run: node scripts/build.mjs
+      - name: Provision Cloudflare (D1 + KV + R2), migrate, first-run seed & admin
+        env:
+          ADMIN_NAME: ${{ secrets.ADMIN_NAME }}
+          ADMIN_USERNAME: ${{ secrets.ADMIN_USERNAME }}
+          ADMIN_PASSWORD: ${{ secrets.ADMIN_PASSWORD }}
+        run: node scripts/provision.mjs
+      - name: Deploy Worker
+        id: deploy
+        run: |
+          npx wrangler deploy -c worker/wrangler.toml 2>&1 | tee deploy.log
+          url=$(grep -Eo 'https://[a-zA-Z0-9.-]+\.workers\.dev' deploy.log | head -1)
+          echo "url=${PUBLIC_URL:-$url}" >> "$GITHUB_OUTPUT"
+      - name: Sync optional integration secrets to the Worker
+        env:
+          BOOTSTRAP_TOKEN: ${{ secrets.BOOTSTRAP_TOKEN }}
+          BKASH_APP_KEY: ${{ secrets.BKASH_APP_KEY }}
+          BKASH_APP_SECRET: ${{ secrets.BKASH_APP_SECRET }}
+          BKASH_USERNAME: ${{ secrets.BKASH_USERNAME }}
+          BKASH_PASSWORD: ${{ secrets.BKASH_PASSWORD }}
+          BKASH_BASE_URL: ${{ secrets.BKASH_BASE_URL }}
+          NAGAD_MERCHANT_ID: ${{ secrets.NAGAD_MERCHANT_ID }}
+          NAGAD_MERCHANT_PRIVATE_KEY: ${{ secrets.NAGAD_MERCHANT_PRIVATE_KEY }}
+          NAGAD_PG_PUBLIC_KEY: ${{ secrets.NAGAD_PG_PUBLIC_KEY }}
+          SSLCZ_STORE_ID: ${{ secrets.SSLCZ_STORE_ID }}
+          SSLCZ_STORE_PASSWD: ${{ secrets.SSLCZ_STORE_PASSWD }}
+          SSLCZ_SANDBOX: ${{ secrets.SSLCZ_SANDBOX }}
+          STEADFAST_API_KEY: ${{ secrets.STEADFAST_API_KEY }}
+          STEADFAST_SECRET_KEY: ${{ secrets.STEADFAST_SECRET_KEY }}
+          STEADFAST_WEBHOOK_TOKEN: ${{ secrets.STEADFAST_WEBHOOK_TOKEN }}
+          PATHAO_CLIENT_ID: ${{ secrets.PATHAO_CLIENT_ID }}
+          PATHAO_CLIENT_SECRET: ${{ secrets.PATHAO_CLIENT_SECRET }}
+          PATHAO_USERNAME: ${{ secrets.PATHAO_USERNAME }}
+          PATHAO_PASSWORD: ${{ secrets.PATHAO_PASSWORD }}
+          PATHAO_STORE_ID: ${{ secrets.PATHAO_STORE_ID }}
+          PATHAO_WEBHOOK_SECRET: ${{ secrets.PATHAO_WEBHOOK_SECRET }}
+          REDX_API_TOKEN: ${{ secrets.REDX_API_TOKEN }}
+          FRAUD_CHECK_API_URL: ${{ secrets.FRAUD_CHECK_API_URL }}
+          FRAUD_CHECK_API_KEY: ${{ secrets.FRAUD_CHECK_API_KEY }}
+          SMS_API_URL: ${{ secrets.SMS_API_URL }}
+          SMS_API_KEY: ${{ secrets.SMS_API_KEY }}
+          SMS_SENDER_ID: ${{ secrets.SMS_SENDER_ID }}
+          WHATSAPP_TOKEN: ${{ secrets.WHATSAPP_TOKEN }}
+          WHATSAPP_PHONE_ID: ${{ secrets.WHATSAPP_PHONE_ID }}
+          WHATSAPP_VERIFY_TOKEN: ${{ secrets.WHATSAPP_VERIFY_TOKEN }}
+          WHATSAPP_APP_SECRET: ${{ secrets.WHATSAPP_APP_SECRET }}
+          RESEND_API_KEY: ${{ secrets.RESEND_API_KEY }}
+          EMAIL_FROM: ${{ secrets.EMAIL_FROM }}
+          VAPID_PUBLIC_KEY: ${{ secrets.VAPID_PUBLIC_KEY }}
+          VAPID_PRIVATE_KEY: ${{ secrets.VAPID_PRIVATE_KEY }}
+          VAPID_SUBJECT: ${{ secrets.VAPID_SUBJECT }}
+          META_CAPI_TOKEN: ${{ secrets.META_CAPI_TOKEN }}
+          META_TEST_EVENT_CODE: ${{ secrets.META_TEST_EVENT_CODE }}
+          GA4_API_SECRET: ${{ secrets.GA4_API_SECRET }}
+          TURNSTILE_SITE_KEY: ${{ secrets.TURNSTILE_SITE_KEY }}
+          TURNSTILE_SECRET: ${{ secrets.TURNSTILE_SECRET }}
+        run: node scripts/sync-secrets.mjs
+      # A brand-new workers.dev address (first deploy) or a fresh version can take a minute to reach every Cloudflare
+      # location, and early requests may still get 404. Wait for three good answers in a row (up to ~4 minutes).
+      - name: Smoke test
+        if: steps.deploy.outputs.url != ''
+        run: |
+          url="${{ steps.deploy.outputs.url }}"; good=0
+          for i in $(seq 1 48); do
+            if curl -fsS -o /dev/null "$url/api/health" && curl -fsS -o /dev/null "$url/"; then good=$((good+1)); else good=0; fi
+            [ "$good" -ge 3 ] && { echo "Live: $url"; exit 0; }
+            sleep 5
+          done
+          echo "::error::$url did not answer reliably within 4 minutes"; exit 1
+      - name: Doctor (full health check)
+        env:
+          SITE_URL: ${{ steps.deploy.outputs.url }}
+          DOCTOR_WAIT_SECONDS: "120"
+        run: node scripts/doctor.mjs
+      - name: Summary
+        if: always() && steps.deploy.outputs.url != ''
+        run: |
+          echo "### 🚀 $(node -p "require('./worker/src/brand.json').name.en") deployed" >> "$GITHUB_STEP_SUMMARY"
+          echo "- Store: ${{ steps.deploy.outputs.url }}" >> "$GITHUB_STEP_SUMMARY"
+          echo "- Admin: ${{ steps.deploy.outputs.url }}/admin/" >> "$GITHUB_STEP_SUMMARY"
