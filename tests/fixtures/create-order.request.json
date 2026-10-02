@@ -1,0 +1,32 @@
+{
+  "customer": {
+    "name": "Nusrat Jahan",
+    "phone": "01711223344",
+    "email": ""
+  },
+  "address": {
+    "division_id": 6,
+    "district_id": 47,
+    "upazila_id": 9026,
+    "division": "Dhaka",
+    "district": "Dhaka",
+    "upazila": "Mirpur",
+    "area": "House 12, Road 3, Section 10"
+  },
+  "items": [
+    {
+      "variantId": 1,
+      "quantity": 2
+    }
+  ],
+  "paymentMethod": "COD",
+  "note": "Please call before delivery",
+  "giftWrap": false,
+  "lang": "bn",
+  "sessionId": "sess-fixture-000000000001",
+  "utm": {
+    "source": "facebook",
+    "medium": "cpc",
+    "campaign": "11-11-gadget-sale"
+  }
+}

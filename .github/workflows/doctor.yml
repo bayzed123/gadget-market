@@ -1,0 +1,46 @@
+# Doctor — a read-only health check of the whole shop, with the exact fix for every problem (see scripts/doctor.mjs):
+#   GitHub secrets · Cloudflare token validity and permissions (Workers, D1, KV, R2) · D1 / KV / R2 / Worker exist
+#   · migrations applied · starter data, delivery zones, Super Admin, low stock · Worker secrets
+#   · live storefront, admin, API, product page and photo, delivery fee, robots.txt, sitemap, security headers.
+# Runs every morning (a failure emails the repository owner) and by hand: Actions → Doctor → Run workflow.
+# The report is in the run's Summary tab. Nothing is changed and no secret value is printed.
+name: Doctor
+
+on:
+  schedule:
+    - cron: "17 2 * * *" # 08:17 Bangladesh time
+  workflow_dispatch:
+    inputs:
+      site_url:
+        description: Shop address to test (leave blank for PUBLIC_URL or the workers.dev address)
+        required: false
+        type: string
+      live_only:
+        description: Only test the live site (skip the Cloudflare account checks)
+        required: false
+        type: boolean
+        default: false
+
+permissions:
+  contents: read
+
+jobs:
+  doctor:
+    name: Check the shop
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    env:
+      CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+      CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
+      ADMIN_USERNAME: ${{ secrets.ADMIN_USERNAME }}
+      ADMIN_PASSWORD: ${{ secrets.ADMIN_PASSWORD }}
+      WORKER_NAME: ${{ vars.WORKER_NAME || 'gadget-market' }}
+      PUBLIC_URL: ${{ vars.PUBLIC_URL }}
+      SITE_URL: ${{ inputs.site_url }}
+    steps:
+      - uses: actions/checkout@v5
+      - uses: actions/setup-node@v5
+        with:
+          node-version: 22
+      - name: Run doctor
+        run: node scripts/doctor.mjs ${{ inputs.live_only && '--live-only' || '' }}

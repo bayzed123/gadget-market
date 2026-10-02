@@ -1,0 +1,67 @@
+# CI — runs on every push and pull request. When it passes on main, the Deploy workflow publishes the shop.
+#
+#   build → TypeScript check → unit + integration tests (Workers runtime, local D1/KV/R2)
+#         → Playwright E2E (storefront checkout + admin call logging, mobile and desktop)
+name: CI
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+  workflow_dispatch:
+
+concurrency:
+  group: ci-${{ github.ref }}
+  cancel-in-progress: true
+
+permissions:
+  contents: read
+
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    steps:
+      - uses: actions/checkout@v5
+      - uses: actions/setup-node@v5
+        with:
+          node-version: 22
+          cache: npm
+      - run: npm ci
+      - name: Build (storefront, admin, seed SQL)
+        run: node scripts/build.mjs
+      - name: TypeScript check
+        run: npx tsc --noEmit
+      - name: Check scripts parse
+        run: for f in scripts/*.mjs; do node --check "$f"; done
+      - name: Unit & integration tests (Workers runtime + local D1/KV/R2)
+        run: npx vitest run
+      - name: Cache Playwright browser
+        id: pw-cache
+        uses: actions/cache@v4
+        with:
+          path: ~/.cache/ms-playwright
+          key: playwright-${{ runner.os }}-${{ hashFiles('package-lock.json') }}
+      # The browser download and its apt packages occasionally stall on the runner; each try is capped at 4 minutes
+      # and retried, so a stall costs minutes instead of the whole job.
+      - name: Install Playwright browser
+        timeout-minutes: 14
+        run: |
+          for i in 1 2 3; do
+            if [ "${{ steps.pw-cache.outputs.cache-hit }}" = "true" ]; then
+              timeout 240 npx playwright install-deps chromium && exit 0
+            else
+              timeout 240 npx playwright install --with-deps chromium && exit 0
+            fi
+            echo "::warning::Playwright install attempt $i failed or stalled — retrying"; sleep 10
+          done
+          exit 1
+      - name: End-to-end tests (storefront + admin, mobile + desktop)
+        timeout-minutes: 12
+        run: npx playwright test
+      - uses: actions/upload-artifact@v4
+        if: failure()
+        with:
+          name: playwright-report
+          path: playwright-report/
+          retention-days: 7
